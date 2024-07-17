@@ -1,12 +1,14 @@
 const express = require("express");
 const router = require("./routes");
+const databaseConnect = require("./database");
 
 const app = express();
-
 const port = 3333;
 
-app.use('/api', router);
+databaseConnect().then(() => {
+    app.use('/api', router);
 
-app.listen(port, () => {
-    console.log(`on-line. port ${port}`)
-})
+    app.listen(port, () => {
+        console.log(`on-line. port ${port}`)
+    })
+});

@@ -1,5 +1,6 @@
 const { User } = require('../models');
 const { Op } = require('sequelize');
+const { removeDeletedAtFromJson } = require('./util');
 
 class UserController {
     //Create user
@@ -31,7 +32,8 @@ class UserController {
             const capitalizedLastName = lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase();
 
             const user = await User.create({ firstName: capitalizedFirstName, lastName:capitalizedLastName, email: lowerCaseEmail, password, birthDate});
-            res.status(201).json(user);
+            const response = removeDeletedAtFromJson(user); 
+            return res.status(200).json(response);
 
         }catch(e){
             res.status(500).json({ error: e.message});
@@ -60,7 +62,8 @@ class UserController {
                 return res.status(400).json({error: 'unregistered email'});
             }
 
-           return res.status(200).json(existingUser);
+           const response = removeDeletedAtFromJson(existingUser); 
+           return res.status(200).json(response);
 
         } catch (e){
             res.status(500).json({error: e.message});
@@ -70,7 +73,7 @@ class UserController {
     //read all users
     static async readAllUsers(req,res){
         try{
-            
+
             const users = await User.findAll({
                 attributes: {
                     exclude: ['password'] 
@@ -83,55 +86,133 @@ class UserController {
         }
     }
 
-        //Search users
-        static async searchUsers(req,res){
-            try{
+    //Search users
+    static async searchUsers(req,res){
+        try{
+        
+            const { query } = req.query;
             
-                const { query } = req.query;
-                
-                if (!query) {
-                    return res.status(400).json({ error: 'Query parameter is required.' });
-                }
-
-                const lowerCaseQuery = query.toLowerCase();
-                const users = await User.findAll({
-                    where: {
-                        [Op.or]: [
-                            {
-                                email: {
-                                    [Op.like]: `%${lowerCaseQuery}%`
-                                }
-                            },
-                            {
-                                firstName: {
-                                    [Op.like]: `%${lowerCaseQuery}%`
-                                }
-                            },
-                            {
-                                lastName: {
-                                    [Op.like]: `%${lowerCaseQuery}%`
-                                }
-                            }
-                        ]
-                    },
-                    attributes: {
-                        exclude: ['password'] 
-                    }
-                })
-
-                if (users.length > 0) {
-                    return res.status(200).json(users);
-                } else {
-                    return res.status(404).json({ error: 'No users found.' });
-                }
-
-
-            } catch (e){
-                res.status(500).json({error: e.message});
+            if (!query) {
+                return res.status(400).json({ error: 'Query parameter is required.' });
             }
+
+            const lowerCaseQuery = query.toLowerCase();
+            const users = await User.findAll({
+                where: {
+                    [Op.or]: [
+                        {
+                            email: {
+                                [Op.like]: `%${lowerCaseQuery}%`
+                            }
+                        },
+                        {
+                            firstName: {
+                                [Op.like]: `%${lowerCaseQuery}%`
+                            }
+                        },
+                        {
+                            lastName: {
+                                [Op.like]: `%${lowerCaseQuery}%`
+                            }
+                        }
+                    ]
+                },
+                attributes: {
+                    exclude: ['password'] 
+                }
+            })
+
+            if (users.length > 0) {
+                return res.status(200).json(users);
+            } else {
+                return res.status(404).json({ error: 'No users found.' });
+            }
+
+
+        } catch (e){
+            res.status(500).json({error: e.message});
         }
+    }
     
-    
+    //Update user
+    static async updateUser(req, res){
+        try{
+           
+            const { id } = req.params;
+            const { firtsName, lastName, email, password } = req.body;
+
+            if(!id){
+                return res.status(400).json({ error: 'User ID is required.'});
+            }
+
+            const user = await User.findByPk(id);
+            if (!user) {
+                return res.status(404).json({ error: 'User not found.'});
+            }
+
+            const updateData = {};
+
+            if(firtsName !== undefined){
+                updateData.firstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+            }
+
+            if(lastName !== undefined){
+                updateData.lastName = lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase();
+            }
+
+            if(email !== undefined){
+                const lowerCaseEmail = email.toLowerCase();
+                
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if(!emailRegex.test(lowerCaseEmail)){
+                    return res.status(400).json({error: `'${lowerCaseEmail}' invalid e-mail format.`});
+                }
+
+                const existingUser = await User.findOne({where: {email: lowerCaseEmail}});
+                if (existingUser){
+                    return res.status(400).json({error: `'${lowerCaseEmail}' already exists.`});
+                }
+
+                updateData.email = email.toLowerCase();
+            }
+
+            if(password !== undefined){
+                updateData.password = password;
+            }
+
+            await user.update(updateData);
+
+            const userWithoutPassword = user.toJSON();
+            delete userWithoutPassword.password;
+
+            res.status(200).json(userWithoutPassword);
+        } catch(e){
+            return res.status(500).json({error: e.message});
+        }
+    }
+
+    //delete user
+    static async deleteUser(req, res){
+        try{
+            const { id } = req.params;
+
+            if(!id){
+                return res.status(400).json({ error: 'User ID is required.'});
+            }
+
+            const user = await User.findByPk(id);
+            if (!user) {
+                return res.status(404).json({ error: 'User not found.'});
+            }
+
+            user.destroy();
+
+            return res.status(200).json({message: 'User deleted successfully'});
+
+        }catch(e){
+            return res.status(500).json({error: e.message});
+        }
+    }
 }
 
 module.exports = UserController;

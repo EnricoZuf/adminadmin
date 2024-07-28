@@ -26,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'TaskAssignments',
+    tableName: 'task_assignments',
     paranoid: true, // Enables soft deletes
   });
   return TaskAssignments;

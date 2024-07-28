@@ -29,6 +29,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'TaskDueDateChanges',
+    tableName: 'task_due_date_changes',
     paranoid: true, // Enables soft deletes
   });
   return TaskDueDateChanges;

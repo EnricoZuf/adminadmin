@@ -1,5 +1,5 @@
 const express = require('express');
-const TaskController = require('../controllers/taskController');
+const TaskController = require('../../controllers/taskController');
 const router = express.Router();
 
 router.get('/tasks/:userId', TaskController.getAllTasks);       // Get all tasks of a user

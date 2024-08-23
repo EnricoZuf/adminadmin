@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>adminadmin</title>
+    <link rel="stylesheet" href="/login.css">
+</head>
+<body>
+    <div class="login-container">
+        <h2>AdminAdmin</h2>
+        <div id="form-container">
+            <% if (formType === 'register') {%>
+                <%- include('partials/register-form') %>
+            <% } else { %>
+                <%- include('partials/login-form') %>
+            <% } %>
+        </div>
+    </div>
+</body>
+<script src="/toggleForm.js"></script>
+</html>

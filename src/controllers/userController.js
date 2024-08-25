@@ -3,6 +3,8 @@ const { Op } = require('sequelize');
 const { removeDeletedAtFromJson } = require('./util');
 
 class UserController {
+    //API Functions
+
     //Create user
     static async createUser(req, res){
         try{
@@ -211,6 +213,77 @@ class UserController {
 
         }catch(e){
             return res.status(500).json({error: e.message});
+        }
+    }
+
+    //View functions
+
+    //login
+    static async viewLogin(req, res){
+        try{
+            const { email, password } = req.body;
+
+            const existingUser = await User.findOne({where: {email: email.toLowerCase()}});
+            if (!existingUser){
+                return res.status(401).render('login', {
+                    formType: 'login',
+                    errorMessage: 'Email or password is incorrect'
+                });
+            }
+
+            const UserPassword = existingUser.password;
+            if(UserPassword != password){
+                return res.status(401).render('login', {
+                    formType: 'login',
+                    errorMessage: 'Email or password is incorrect'
+                });
+            }
+
+            return res.status(200).render('home', {
+                formType: 'home',
+                errorMessage: null
+            });
+
+        }catch(e){
+            return res.status(500).json({error: 'Internal server error'});
+        }
+    }
+
+    static async viewRegister(req, res){
+        try{
+            const { firstName, lastName, email, password, birthDate } = req.body;
+
+            console.log(firstName, lastName, email, password, birthDate);
+            
+            if(!firstName || !lastName || !email || !password || !birthDate){
+                return res.render('login', { formType: 'register', errorMessage: 'All fields are required.' });
+            }
+            
+            const lowerCaseEmail = email.toLowerCase();
+            const existingUser = await User.findOne({where: {email: lowerCaseEmail}});
+            if (existingUser){
+                return res.render('login', { formType: 'register', errorMessage: `'${lowerCaseEmail}' already exists.` });
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if(!emailRegex.test(lowerCaseEmail)){
+                return res.render('login', { formType: 'register', errorMessage: `'${lowerCaseEmail}' invalid e-mail format.` });
+            }
+            
+            const birthdateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            if(!birthdateRegex.test(birthDate)){
+                return res.render('login', { formType: 'register', errorMessage: `Invalid birthdate format. Use YYYY-MM-DD` });
+            }
+
+            const capitalizedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+            const capitalizedLastName = lastName.charAt(0).toUpperCase() + lastName.slice(1).toLowerCase();
+
+            const user = await User.create({ firstName: capitalizedFirstName, lastName:capitalizedLastName, email: lowerCaseEmail, password, birthDate});
+            const response = removeDeletedAtFromJson(user); 
+            return res.redirect('/login');
+
+        }catch(e){
+            return res.render('login', { formType: 'register', errorMessage: e.message });
         }
     }
 }
